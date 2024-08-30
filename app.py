@@ -1,81 +1,28 @@
-import numpy
+import krakenex
+import pandas
 
 from dotenv import load_dotenv
-from Kraken import Kraken
-from scipy import stats
+from pykrakenapi import KrakenAPI
+from scipy.stats import linregress
+from time import sleep
 
-load_dotenv()
+k = krakenex.API()
+k.load_key('kraken.key')
+kraken = KrakenAPI(k, tier='Pro')
 
-kraken = Kraken()
-raw = {
-        asset: {
-            asset_pair: kraken.ohlc(asset_pair) for asset_pair in kraken.ASSET_PAIRS[asset]
-            } for asset in kraken.ASSETS
-        }
-processed = {
-        asset: {
-            asset_pair: {
-                'time': numpy.array(
-                    [int(each[0]) for each in raw[asset][asset_pair]['result'][kraken.ASSET_PAIRS[asset][asset_pair]]]
-					),
-                'open': numpy.array(
-                    [float(each[1]) for each in raw[asset][asset_pair]['result'][kraken.ASSET_PAIRS[asset][asset_pair]]]
-					),
-                'high': numpy.array(
-                    [float(each[2]) for each in raw[asset][asset_pair]['result'][kraken.ASSET_PAIRS[asset][asset_pair]]]
-					),
-                'low': numpy.array(
-                    [float(each[3]) for each in raw[asset][asset_pair]['result'][kraken.ASSET_PAIRS[asset][asset_pair]]]
-					),
-                'close': numpy.array(
-                    [float(each[4]) for each in raw[asset][asset_pair]['result'][kraken.ASSET_PAIRS[asset][asset_pair]]]
-					),
-                'volume': numpy.array(
-                    [float(each[5]) for each in raw[asset][asset_pair]['result'][kraken.ASSET_PAIRS[asset][asset_pair]]]
-					),
-                'count': numpy.array(
-                    [float(each[6]) for each in raw[asset][asset_pair]['result'][kraken.ASSET_PAIRS[asset][asset_pair]]]
-                    )
-                } for asset_pair in kraken.ASSET_PAIRS[asset]
-            } for asset in kraken.ASSETS
-        }
-linregresses = {
-        asset: {
-            asset_pair: {
-                'open': stats.linregress(
-                    processed[asset][asset_pair]['time'],
-                    processed[asset][asset_pair]['open']
-                    ),
-                'high': stats.linregress(
-                    processed[asset][asset_pair]['time'],
-                    processed[asset][asset_pair]['high']
-                    ),
-                'low': stats.linregress(
-                    processed[asset][asset_pair]['time'],
-                    processed[asset][asset_pair]['low']
-                    ),
-                'close': stats.linregress(
-                    processed[asset][asset_pair]['time'],
-                    processed[asset][asset_pair]['close']
-                    )
-                } for asset_pair in kraken.ASSET_PAIRS[asset]
-            } for asset in kraken.ASSETS
-        }
-slopes = {
-        asset: {
-            asset_pair: {
-                'open': linregresses[asset][asset_pair]['open'].slope,
-                'high': linregresses[asset][asset_pair]['high'].slope,
-                'low': linregresses[asset][asset_pair]['low'].slope,
-                'close': linregresses[asset][asset_pair]['close'].slope
-                } for asset_pair in kraken.ASSET_PAIRS[asset]
-            } for asset in kraken.ASSETS
-        }
-averages = {
-        asset: {
-            asset_pair: sum(
-                [slopes[asset][asset_pair][each] for each in slopes[asset][asset_pair]]
-                )/4 for asset_pair in kraken.ASSET_PAIRS[asset]
-            } for asset in kraken.ASSETS
-        }
-print(averages)
+def get_markets_by_asset(asset):
+    tradable_asset_pairs = kraken.get_tradable_asset_pairs()
+    return tradable_asset_pairs[
+            ((tradable_asset_pairs['base'] == asset | tradable_asset_pairs['quote'] == asset)
+                & (tradable_asset_pairs['status'] == 'online'))
+            ]
+
+def get_ohlc_linear_regression(ohlc):
+    regressions = pandas.DataFrame({
+        'open': linregress(ohlc['time'].astype(float), ohlc['open'].astype(float)),
+        'high': linregress(ohlc['time'].astype(float), ohlc['high'].astype(float)),
+        'low': linregress(ohlc['time'].astype(float), ohlc['low'].astype(float)),
+        'close': linregress(ohlc['time'].astype(float), ohlc['close'].astype(float))
+        }).transpose()
+    regressions.columns = ['slope', 'intercept', 'r_value', 'p_value', 'stderr']
+    return regressions
