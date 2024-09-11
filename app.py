@@ -84,20 +84,25 @@ def main():
             )
 
     account_balance = kraken.get_account_balance()
-    for asset in account_balance.index.drop('ZUSD'):
-        market = asset_pairs[asset_pairs['base'] == asset]
-        if market.index[0] not in graded_models[:5].index:
-            sell_asset(market, account_balance.loc[asset].vol)
+    for asset in account_balance[(account_balance.index != 'ZUSD') & (account_balance.vol > 0)]:
+        for market in asset_pairs[asset_pairs['base'] == asset].index:
+            if market not in graded_models[:INVESTMENT_COUNT].index:
+                sell_asset(market, account_balance.loc[asset].vol)
 
-    while len(account_balance := kraken.get_account_balance()) - 1 < INVESTMENT_COUNT: 
-        if account_balance.loc['ZUSD'].vol <= INVESTMENT_VOLUME:
-            break
+    account_balance = kraken.get_account_balance()
+    while ((len(account_balance[account_balance.vol > 0]) - 1 < INVESTMENT_COUNT) &
+            (account_balance.loc['ZUSD'].vol > INVESTMENT_VOLUME)):
         for market in graded_models.index:
-            if asset_pairs.loc[market].base not in account_balance.index:
+            if asset_pairs.loc[market].base not in account_balance[account_balance.vol > 0].index:
                 ohlc, last = kraken.get_ohlc_data(market)
                 volume = INVESTMENT_VOLUME/ohlc.iloc[-1].close
                 buy_asset(market, volume)
+                account_balance = kraken.get_account_balance()
+                sleep(kraken.factor)
                 break
+
+    print(kraken.get_account_balance())
+    print(kraken.get_trade_balance(asset='ZUSD'))
 
 if __name__ == '__main__':
     main()
