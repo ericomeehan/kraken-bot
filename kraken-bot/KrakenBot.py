@@ -75,6 +75,7 @@ class KrakenBot():
         graded_models = self.grade_models(
                 {asset_pair: self.model_asset_pair(asset_pair) for asset_pair in asset_pairs.index}
                 )
+        print(graded_models)
 
         account_balance = self.kraken.get_account_balance()
         for asset in account_balance[(account_balance.index != 'ZUSD') & (account_balance.vol > 0)]:
