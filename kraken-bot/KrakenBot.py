@@ -93,10 +93,13 @@ class KrakenBot():
                 if asset_pairs.loc[market].base not in account_balance[account_balance.vol > 0].index:
                     ohlc, last = self.kraken.get_ohlc_data(market)
                     volume = self.investment_volume/ohlc.iloc[-1].close
-                    self.buy_asset(market, volume)
-                    account_balance = self.kraken.get_account_balance()
-                    time.sleep(self.kraken.factor)
-                    break
+                    try:
+                        self.buy_asset(market, volume)
+                        account_balance = self.kraken.get_account_balance()
+                        time.sleep(self.kraken.factor)
+                        break
+                    except:
+                        continue
 
         print(self.kraken.get_account_balance())
         print(self.kraken.get_trade_balance(asset='ZUSD'))
