@@ -78,9 +78,13 @@ class KrakenBot():
         print(graded_models)
 
         account_balance = self.kraken.get_account_balance()
-        for asset in account_balance[(account_balance.index != 'ZUSD') & (account_balance.vol > 0)]:
-            for market in asset_pairs[asset_pairs['base'] == asset].index:
-                if market not in graded_models[:self.investment_count].index:
+        for asset in account_balance.index:
+            if asset != 'ZUSD':
+                market = graded_models[
+                        (graded_models.base == asset) &
+                        (graded_models.quote == 'ZUSD')
+                        ]
+                if market.index[0] not in graded_models[:self.investment_count].index:
                     self.sell_asset(market, account_balance.loc[asset].vol)
 
         account_balance = self.kraken.get_account_balance()
