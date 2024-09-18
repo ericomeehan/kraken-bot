@@ -83,7 +83,7 @@ class KrakenBot():
                     (asset_pairs.base == asset) &
                     (asset_pairs.quote == 'ZUSD')
                     ]
-            if market.index[0] not in graded_models[:self.investment_count].index:
+            if market.index[0] not in graded_models[:self.investment_count * 2].index:
                 self.sell_asset(market.index[0], account_balance.loc[asset].vol)
 
         account_balance = self.kraken.get_account_balance()
