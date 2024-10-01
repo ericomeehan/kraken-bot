@@ -2,6 +2,7 @@ import krakenex
 import logging
 import os
 import scipy
+import sys
 import time
 
 from pykrakenapi import KrakenAPI
@@ -14,6 +15,7 @@ class KrakenBot(KrakenAPI):
         self.log.setLevel(
                 getattr(logging, os.getenv('LOG_LEVEL', 'INFO'), logging.INFO)
                 )
+        self.log.addHandler(logging.StreamHandler(sys.stdout))
         super().__init__(krakenex.API(token, secret), tier=tier)
         self.update(full=True)
 
